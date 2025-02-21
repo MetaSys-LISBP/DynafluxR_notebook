@@ -22,7 +22,7 @@ The code is open-source and available under [GPLv3 license](https://www.gnu.org/
 
 If not yet done, download and install [Rstudio](https://posit.co/downloads/).
 
-Some required dependencies are specific to our notebook, not to DynafluxR itself. If these dependencies are not already available on your system, they can be installed with the following command in an RStudio console:
+Some required dependencies are specific to our notebook, not to DynafluxR itself.
 
 `RColorBrewer`, `stringr`, and `vioplot` can be installed
 by running the following command in the Rstudio console:
@@ -46,7 +46,7 @@ Additional information on CoRC installation and usage are available from the CoR
 
 ## Usage
 
-To run all analyses detailed in the publication and reproduce Figures 1-4, 6-7 and EV1-2:
+To run all analyses detailed in the publication and reproduce Figures 2 and 3:
 
 - download the [GitHub repository tarball](https://github.com/MetaSys-LISBP/DynafluxR_notebook/archive/refs/heads/master.zip) and unpack it somewhere on your disk
 
