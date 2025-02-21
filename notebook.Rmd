@@ -1,0 +1,552 @@
+---
+title: "DynafluxR - Supplementary information"
+output:
+  html_document:
+    df_print: paged
+    toc: yes
+---
+
+```{r, include=FALSE, warning=FALSE}
+knitr::opts_chunk$set(
+  collapse=TRUE,
+  comment="#>",
+  fig.width=7,
+  fig.height=5
+)
+```
+
+This notebook performs all computational analyses detailed in:
+
+> **Estimating flux dynamics from time-course metabolite concentrations with dynafluxr.**
+>
+> S. Sokol, S. Dubiley, P. Rouan, C. Charlier, G. Lippens, P. Millard
+>
+> bioRxiv preprint, doi: 10.1101/XXXXXXXXXXXXX
+
+This R Markdown notebook is available at <https://github.com/MetaSys-LISBP/dynafluxr>
+
+Authors: Sergueï Sokol ([sokol\@insa-toulouse.fr](mailto:sokol@insa-toulouse.fr){.email}), Pierre Millard ([pierre.millard\@insa-toulouse.fr](mailto:pierre.millard@insa-toulouse.fr){.email})
+
+Copyright INRAE, 2025
+
+# 1. Prepare environment
+
+Load DynafluxR and other required packages.
+
+```{r setup}
+
+library(dynafluxr)
+library(CoRC)
+library(RColorBrewer)
+library(stringr)
+library(vioplot)
+
+# color generator
+fun_col <- colorRampPalette(rev(brewer.pal(11, "Spectral")))
+col_6 <- brewer.pal(n=12, name='Paired')[c(2,4,6,8,10,12)]
+```
+
+Set path.
+
+```{r}
+
+# get current directory
+wd <- getwd()
+
+# change the path if needed
+#wd <- "~/GIT/dynafluxr/sup_data"
+```
+
+# 2. Example 1: Synthetic dataset
+
+Set paths.
+
+```{r}
+
+example1_dir <- file.path(wd, "toy_model")
+model_dir <- file.path(example1_dir, "model")
+results_dir <- file.path(example1_dir, "results")
+tmp_dir <- file.path(results_dir, "tmp")
+```
+
+## 2.1. Simulation of the dataset
+
+Simulate time-course fluxes and metabolite concentrations (20 equally time points) using a kinetic model and COPASI.
+
+```{r}
+
+# load kinetic model in COPASI
+loadModel(file.path(model_dir, "model.cps"))
+
+# run time course simulations (20 time points)
+setTimeCourseSettings(intervals=19)
+simulations <- runTimeCourse()
+
+# save time-course concentrations
+concentrations <- simulations$result[,1:9]
+write.table(concentrations, file.path(results_dir, "sim_data.txt"), row.names=FALSE, sep="\t", quote=FALSE)
+```
+
+## 2.2. Dynamic flux calculation
+
+Calculate fluxes from true (simulated) data with DynafluxR (using default values for all parameters).
+
+```{r}
+
+startTime <- Sys.time()
+
+# run flux calculation
+res <- cli(c("-m", file.path(results_dir, "sim_data.txt"),
+             "-s", file.path(example1_dir, "network.txt")))
+
+endTime <- Sys.time()
+print(endTime - startTime)
+```
+
+Plot true vs fitted metabolite dynamics (Figure 2B).
+
+```{r Figure_2B, fig.width = 6.3, fig.height = 4.5, fig.path='toy_model/figures/', dev=c('png', 'pdf')}
+
+# best fit
+x_sim <- res$tp
+y_sim <- res$isp(res$tp)
+
+# simulated data
+x <- simulations$result[,1]
+y <- simulations$result[,colnames(y_sim)]
+
+# create colors
+cols <- fun_col(ncol(y))
+cols_alpha <- paste(cols, "55", sep="")
+
+# plot simulated vs fitted data
+matplot(x=x, y=y, type="p", pch=21, cex=1.5, lwd=2, col=cols, bg=cols_alpha, las=1, ylab="concentration", xlab="time")
+matlines(x=x_sim, y=y_sim, lwd=2, lty=1, col=cols)
+legend("topright", inset=c(0.04, 0), legend=colnames(y), col=cols, pch=21, pt.bg=cols_alpha, pt.cex=1.5, pt.lwd=2, bty="n", ncol=4)
+
+# add legend
+legend("top", inset=c(-0.08, 0), legend="best fit", col="black", lwd=2, bty="n")
+
+# add confidence intervals
+y_sim_sd_p <- res$rsp(res$tpp)
+y_sim_sd_m <- res$rsp(res$tpp)
+for (i in seq(ncol(y_sim))){
+  polygon(x=c(res$tpp, rev(res$tpp)), y=c((y_sim_sd_p[,i]), rev(y_sim_sd_m[,i])),
+          col=paste(fun_col(ncol(y))[i], "55", sep=""), border=NA)
+}
+```
+
+Mean error on metabolite concentrations.
+
+```{r}
+
+mean_err_conc <- mean(as.matrix(abs(y-y_sim)))
+
+mean_err_conc
+```
+
+Plot true vs fitted flux dynamics.
+
+```{r Figure_2C, fig.width = 6.3, fig.height = 4.5, fig.path='toy_model/figures/', dev=c('png', 'pdf')}
+
+# true flux values
+x <- simulations$result[,1]
+y <- simulations$result[,10:15]
+
+# fluxes calculated with DynafluxR
+x_sim <- res$tpp
+y_sim <- res$vsp(res$tpp)
+y_sim_sd_p <- res$vsp(res$tpp, fsd=1)
+y_sim_sd_m <- res$vsp(res$tpp, fsd=-1)
+
+# create colors
+cols <- fun_col(ncol(y))
+cols_alpha <- paste(cols, "55", sep="")
+
+# plot true vs estimated fluxes
+matplot(x=x, y=y, type="p", pch=21, cex=1.5, lwd=2, col=cols, bg=cols_alpha, las=1, ylab="rate", xlab="time", ylim=c(0,0.1))
+matlines(x=x_sim, y=y_sim, lwd=2, lty=1, col=cols)
+
+# add confidence intervals
+for (i in seq(ncol(y_sim))){
+  polygon(x=c(x_sim, rev(x_sim)), y=c((y_sim_sd_p[,i]), rev(y_sim_sd_m[,i])),
+          col=paste(cols[i], "55", sep=""), border=NA)
+}
+
+# add legend
+leg <- stringr::str_remove_all(stringr::str_remove_all(colnames(y), "]"), "Values\\[")
+legend("topright", inset=c(-0.04, 0), legend=leg, col=cols, pch=21, pt.bg=cols_alpha, pt.cex=1.5, pt.lwd=2, bty="n", ncol=4)
+legend("topright", inset=c(0.045, 0.2), legend="estimated", col="black", lwd=2, bty="n")
+```
+
+Calculate mean error on rates.
+
+```{r}
+
+mean_err_rates <- mean(as.matrix(abs(simulations$result[,10:15] - res$vsp(res$tp))))
+
+mean_err_rates
+```
+
+## 2.3. Robustness analysis
+
+Evaluate robustness of the approach with respect to number of measurements (from 5 to 20 data points) and the number of knots (from 2 to 5). Parameters are kept at default values.
+
+```{r Figure_2D, fig.width = 6.3, fig.height = 4.5, fig.path='toy_model/figures/', dev=c('png', 'pdf')}
+
+# number of data points (from 5 to 20)
+n_points <- seq(5, 20)
+# number of knots (from 2 to 5)
+n_k <- seq(2, 5)
+# matrix to store results
+residuals_k_p <- matrix(data=NA, ncol=length(n_k), nrow=length(n_points))
+
+for (i in n_points){
+  
+  # set number of data points to simulate
+  setTimeCourseSettings(intervals=i-1)
+  
+  # run time-course simulation with COPASI
+  simulations <- runTimeCourse()
+  
+  # save simulated metabolite dynamics (input format of DynafluxR)
+  concentrations <- simulations$result[,1:9]
+  fname <- file.path(tmp_dir, "tmp_1.txt")
+  write.table(concentrations, file=fname, row.names=FALSE, sep="\t", quote=FALSE)
+    
+  # for each number of knots
+  for (k in n_k){
+    
+    # calculate fluxes with DynafluxR
+    suppressWarnings({
+      res <- cli(c("-m", fname,
+                   "-s", file.path(example1_dir, "network.txt"),
+                   "-k", k))
+    })
+    
+    # calculate mean flux error
+    y <- simulations$result[,10:15]
+    y_sim <- res$vsp(res$tp)
+    residuals_k_p[i-n_points[1]+1, k-n_k[1]+1] <- mean(as.matrix(abs(y-y_sim)))
+    
+  }
+}
+```
+
+Plot results.
+
+```{r}
+
+matplot(x=n_points, y=residuals_k_p, ylab="mean rate error", xlab="number of data points", las=1, pch=21, col=col_6, bg=paste0(col_6, "55"), cex=1.5, lwd=2, yaxt="n", log="y")
+axis(2, at=c(1e-3, 1e-2, 1e-1), label=c(0.001, 0.01, 0.1), las=1)
+axis(2, at=c(seq(0.0002, 0.0009, by=0.0001), seq(0.002, 0.009, by=0.001), seq(0.02, 0.09, by=0.01)), labels=FALSE, tcl=-0.3)
+
+legend("topright", inset=c(0.08, 0), title="number of knots", legend=n_k, col=col_6, pch=21, pt.bg=paste(col_6, "55", sep=""), pt.cex=1.5, pt.lwd=2, bty="n", ncol=4)
+```
+
+Evaluate robustness of the approach with respect to noise (Gaussian noise, from 1 to 20 % of the highest concentration of each metabolite).
+
+```{r Figure_2E, fig.width = 6.3, fig.height = 4.5, fig.path='toy_model/figures/', dev=c('png', 'pdf')}
+
+# noise levels (relative to the maximal concentration of each metabolite)
+l_noise <- c(0.01, 0.02, 0.05, 0.1, 0.2)
+
+# number of datasets to generate for each noise level
+n_mc <- 100
+
+# matrix to save calculation results
+residuals_mc <- matrix(data=NA, ncol=n_mc, nrow=length(l_noise))
+rownames(residuals_mc) <- l_noise
+
+# run time-course simulation with COPASI (-> true values) 
+setTimeCourseSettings(intervals=99)
+simulations <- runTimeCourse()
+concentrations <- simulations$result[,1:9]
+fluxes <- simulations$result[,10:15]
+
+# for each noise level
+for (i in seq(length(l_noise))){
+  
+  # run monte carlo analysis (n_mc iterations)
+  for (j in seq(n_mc)){
+    
+    # generate noisy dataset
+    sd_to_add <- apply(concentrations[-1], 2, mean)*l_noise[i]
+    noise <- rnorm(prod(dim(concentrations))-nrow(concentrations), mean=0, sd=rep(sd_to_add, each=nrow(concentrations)))
+    concentrations_noise <- concentrations[,-1] + matrix(noise, ncol=8)    
+    concentrations_noise[concentrations_noise < 0] <- 0
+    concentrations_noise <- cbind(concentrations[,1], concentrations_noise)
+    colnames(concentrations_noise) <- colnames(concentrations)
+    
+    # save dataset in DynafluxR format
+    fname <- file.path(tmp_dir, "tmp_2.txt")
+    write.table(concentrations_noise, file=fname, row.names=FALSE, sep="\t", quote = FALSE)
+    
+    # run flux calculation with DynafluxR
+    res <- cli(c("-m", fname, "-s", file.path(example1_dir, "network.txt")))
+  
+    # calculate mean flux error
+    residuals_mc[i,j] <- mean(as.matrix(abs(fluxes - res$vsp(res$tp))))
+    
+  }
+}
+```
+
+Plot results.
+
+```{r}
+
+# plot results
+vioplot(x=t(residuals_mc), use.cols = TRUE, las=1, col=paste0(col_6[1], "55"), border=col_6[1], rectCol=col_6[1], lineCol=col_6[1], ylim=c(0, 0.015), cex.axis=0.85, yaxs="i")
+title(xlab="measurements noise (rsd of mean metabolite concentrations)")
+title(ylab="mean rate error", line=3.3)
+```
+
+# 3. Example 2: Real-time NMR analysis of a multi-enzymatic reaction system
+
+Set paths.
+
+```{r}
+
+example2_dir <- file.path(wd, "multienzymatic_model")
+model2_dir <- file.path(example2_dir, "kinetic_model")
+```
+
+## 3.1. Flux calculation
+
+Calculate fluxes with DynafluxR with the following parameters:
+
+-   skip the 24 first time points that cause instabilities (`"--skip=24"`)
+
+-   force monotonic decrease of GLC, and monotonic increase of FBP (`"--decr", "GLC"` and `"--incr", "FBP"`)
+
+-   apply scaling factors to FBP and F6P since only their relative concentrations are measured (`"--sf=FBP,F6P"`)
+
+-   define standard deviation on metabolite concentrations (`"--sderr=GLC=0.05,G6P=0.05,FBP=0.1,F6P=0.05"`)
+
+The complete list of parameters can be accessed with `cli("-h")`.
+
+```{r}
+
+startTime <- Sys.time()
+
+res=cli(c("-m", file.path(example2_dir, "data.txt"),
+          "-s", file.path(example2_dir, "network.txt"),
+          '-a', file.path(example2_dir, "atom.tsv"),
+          "-o", file.path(example2_dir, "flux_calculation"),
+          "--decr", "GLC",
+          "--incr", "FBP",
+          "--skip=24",
+          "--sf=FBP,F6P",
+          "--sderr=GLC=0.05,G6P=0.05,FBP=0.1,F6P=0.05"))
+
+endTime <- Sys.time()
+```
+
+Show calculation time.
+
+```{r}
+
+print(endTime - startTime)
+```
+
+Statistical evaluation of the fit.
+
+```{r}
+
+res$chi2tab
+```
+
+Load measured metabolite dynamics.
+
+```{r}
+
+data <- read.table(file.path(example2_dir, "data.txt"), header=TRUE)
+data
+```
+
+Plot measured vs fitted metabolite dynamics.
+
+```{r Figure_3B, fig.width = 6.3, fig.height = 4.5, fig.path='multienzymatic_model/figures/', dev=c('png', 'pdf')}
+
+# plot measured metabolite dynamics
+matplot(x=data[,1], y=data[,2:5], type="p", pch=21, cex=1.5, col=col_6, las=1, ylab="concentration (mM)", xlab="time (min)", lwd=1.5, bg=paste(col_6, "55", sep=""))
+
+# add best fit
+matlines(x=res$tpp, y=res$isp(res$tpp)[,c(1,3,5,6)], lwd=2.5, lty=1, col="black")
+
+# add legend
+legend("topright", inset=c(0.24, 0), legend=colnames(data[,2:5]), col=col_6, pch=21, pt.bg=paste(col_6, "55", sep=""), pt.cex=1.5, pt.lwd=2, bty="n", ncol=4)
+legend("top", inset=c(0.18, 0.1), legend="best fit", col="black", lwd=2, bty="n")
+```
+
+Plot rate dynamics.
+
+```{r Figure_3C, fig.width = 6.3, fig.height = 4.5, fig.path='multienzymatic_model/figures/', dev=c('png', 'pdf')}
+
+# get data to plot
+x_sim_full <- res$tpp
+y_sim_full <- res$vsp(res$tpp)
+y_sim_sd_p_full <- res$vsp(res$tpp, fsd=1)
+y_sim_sd_m_full <- res$vsp(res$tpp, fsd=-1)
+
+# plot fluxes
+matplot(x=x_sim_full, y=y_sim_full, type="l", lwd=2.5, lty=1, col=col_6[1:3], las=1, ylab="rate (min-1)", xlab="time (min)")
+
+# add confidence intervals
+for (i in seq(ncol(y_sim_full))){
+  polygon(x=c(x_sim_full, rev(x_sim_full)), y=c((y_sim_sd_p_full[,i]), rev(y_sim_sd_m_full[,i])), 
+          col=paste(col_6[i], "55", sep=""), border=NA)
+}
+
+# add legend
+leg <- stringr::str_remove_all(colnames(y_sim_full), ":")
+legend("topright", inset=c(0.04, 0), legend=leg, col=col_6[1:3], lwd=2.5, pt.bg=col_6[1:3], cex=1, bty="n", ncol=4)
+```
+
+## 3.2. Detailed information on metabolite dynamics
+
+The rate estimations allow us to isolate the time-resolved contribution of individual reactions on metabolite dynamics.
+
+```{r Figure_3D, fig.width = 6.3, fig.height = 4.5, fig.path='multienzymatic_model/figures/', dev=c('png', 'pdf')}
+
+x_sim <- res$tpp
+y_sim <- res$vsp(res$tpp)
+y_sim <- y_sim[,c("HXK:", "PGI:")]
+y_sim[,"PGI:"] <- (-y_sim[,"PGI:"])
+
+# plot fluxes
+matplot(x=x_sim, y=y_sim, type="l", lwd=2.5, lty=1, col=col_6[c(1,3)], las=1, ylab="flux (mM.min-1)", xlab="time (min)")
+abline(h=0)
+
+# add legend
+leg <- stringr::str_remove_all(colnames(y_sim), ":")
+legend("topright", inset=c(0.04, 0), legend=leg, col=col_6[c(1,3)], lwd=2.5, pt.bg=col_6[1:3], cex=1, bty="n", ncol=4)
+```
+
+## 3.3. Evaluation of carbon balance
+
+Plot carbon balance of consolidated dataset.
+
+```{r Figure_3E, fig.width = 6.3, fig.height = 4.5, fig.path='multienzymatic_model/figures/', dev=c('png', 'pdf')}
+
+# calculate carbon balance
+x_sim <- res$tpp
+y_sim <- res$iasp(res$tpp)
+y_meas <- colSums(t(res$mf[,-1L])*res$atomlen[colnames(res$mf)[-1L]], na.rm=TRUE)
+
+# plot measured and fitted C balance
+matplot(x=res$tp, y=y_meas, type="p", pch=21, cex=1.5, lwd=1.5, bg="lightblue", col="royalblue", las=1, ylab="total carbon concentration (mM)", xlab="time (min)", ylim=c(35,40))
+matlines(x=x_sim, y=y_sim, type="l", lwd=2.5, lty=1, col="black")
+```
+
+## 3.4. Prediction of FBP dynamics
+
+```{r}
+
+res=cli(c("-m", file.path(example2_dir, "data.txt"),
+          "-s", file.path(example2_dir, "network.txt"),
+          "-o", file.path(example2_dir, "prediction_FBP"),
+          "--decr", "GLC",
+          "--incr", "FBP",
+          "--skip=24",
+          "--lna=FBP",
+          "--sderr=GLC=0.1,G6P=0.1,F6P=0.1"))
+```
+
+Plot rates estimated with and without FBP.
+
+```{r Figure_3F, fig.width = 6.3, fig.height = 4.5, fig.path='multienzymatic_model/figures/', dev=c('png', 'pdf')}
+
+# get data to plot
+x_sim <- res$tpp
+y_sim <- res$vsp(res$tpp)
+y_sim_sd_p <- res$vsp(res$tpp, fsd=1)
+y_sim_sd_m <- res$vsp(res$tpp, fsd=-1)
+
+# plot fluxes
+matplot(x=x_sim, y=y_sim, type="l", lwd=2.5, lty=1, col=col_6[1:3], las=1, ylab="rate (min-1)", xlab="time (min)")
+
+matlines(x=x_sim_full, y=y_sim_full, type="l", lwd=2.5, lty=2, col=col_6[1:3], las=1, ylab="rate (min-1)", xlab="time (min)")
+
+# add legend
+leg <- stringr::str_remove_all(colnames(y_sim), ":")
+legend("topright", inset=c(0.04, 0), legend=leg, col=col_6[1:3], pch=22, pt.bg=col_6[1:3], cex=1, bty="n", ncol=3)
+legend("topright", inset=c(0.04, 0.1), lty=c(1,2), legend=c("full dataset", "without FBP"), col="black", cex=1, lwd=2, bty="n", ncol=1)
+```
+
+Predicted FBP dynamics.
+
+```{r Figure_3G, fig.width = 6.3, fig.height = 4.5, fig.path='multienzymatic_model/figures/', dev=c('png', 'pdf')}
+
+x <- data$Time
+FBP_meas <- data$FBP
+FBP_meas_scaled <- FBP_meas/max(FBP_meas)
+
+x_pred <- res$tpp
+FBP_pred <- res$isp(res$tpp)[,"FBP"]
+FBP_pred_scaled <- FBP_pred/(max(FBP_pred))
+
+
+plot(x=x, y=FBP_meas_scaled, type="p", cex=1.5, lwd=1.5, las=1.5, ylab="relative FBP concentration (AU)", xlab="time (min)", ylim=c(0,1.1), pch=21, col="royalblue", bg="lightblue")
+lines(x=x_pred, y=FBP_pred_scaled, lwd=2.5, lty=1, col="black")
+```
+
+## 3.5. Comparison with kinetic model
+
+Load kinetic model in COPASI.
+
+```{r}
+
+# load kinetic model in COPASI
+loadModel(file.path(model2_dir, "kinetic_model.cps"))
+```
+
+Run parameter estimation.
+
+```{r}
+
+# run parameter estimation
+par_model <- runParameterEstimation()
+
+# display duration of parameter estimation
+par_model$main$cpu_time_s
+```
+
+Simulate fluxes corresponding to best fit.
+
+```{r}
+
+# run time course simulations from best fit
+simulations <- runTimeCourse()
+```
+
+Compare fluxes estimated with kinetic modeling (COPASI) and stoichiometric modeling (DynafluxR).
+
+```{r Figure_3H, fig.width = 6.3, fig.height = 4.5, fig.path='multienzymatic_model/figures/', dev=c('png', 'pdf')}
+
+# get fluxes from the best fit (COPASI)
+x <- simulations$result[25:1025,1]
+y <- simulations$result[25:1025,10:12]
+
+# get fluxes from the best fit (DynafluxR)
+x_sim <- res$tpp
+y_sim <- res$vsp(res$tpp)
+y_sim_sd_p <- res$vsp(res$tpp, fsd=1)
+y_sim_sd_m <- res$vsp(res$tpp, fsd=-1)
+
+# plot flux dynamics
+matplot(x=x, y=y, type="l", lty=2, lwd=2.5, col=col_6[1:3], las=1, ylab="rate (min-1)", xlab="time (min)", ylim=c(0,0.05))
+matlines(x=x_sim, y=y_sim, lwd=2.5, lty=1, col=col_6[1:3])
+
+# add confidence intervals (DynafluxR)
+for (i in seq(ncol(y_sim))){
+  polygon(x=c(x_sim, rev(x_sim)), y=c((y_sim_sd_p[,i]), rev(y_sim_sd_m[,i])),
+          col=paste(col_6[i], "55", sep=""), border=NA)
+}
+
+# add legend
+leg <- stringr::str_remove_all(stringr::str_remove_all(colnames(y), "]"), "Values\\[")
+legend("topright", inset=c(0.04, 0), legend=leg, col=col_6[1:3], pch=22, pt.bg=col_6[1:3], cex=1, bty="n", ncol=3)
+legend("topright", inset=c(0.04, 0.1), lty=c(1,2), legend=c("stoichiometric model", "kinetic model"), col="black", cex=1, lwd=2, bty="n", ncol=1)
+```
