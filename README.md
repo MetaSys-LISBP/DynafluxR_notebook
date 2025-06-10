@@ -46,7 +46,7 @@ Additional information on CoRC installation and usage are available from the CoR
 
 ## Usage
 
-To run all analyses detailed in the publication and reproduce Figures 2 and 3:
+To run all analyses detailed in the publication and reproduce Figures 3 and 4:
 
 - download the [GitHub repository tarball](https://github.com/MetaSys-LISBP/DynafluxR_notebook/archive/refs/heads/master.zip) and unpack it somewhere on your disk
 

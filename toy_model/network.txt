@@ -4,3 +4,6 @@ r3:	C -> D + 2 * E
 r4:	B -> F
 r5:	F -> G
 r6:	G -> H
+r7:	G -> I + K
+r8:	I -> J
+r9:	J -> F

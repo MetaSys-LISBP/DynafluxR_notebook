@@ -42,8 +42,14 @@ library(stringr)
 library(vioplot)
 
 # color generator
-fun_col <- colorRampPalette(rev(brewer.pal(11, "Spectral")))
-col_6 <- brewer.pal(n=12, name='Paired')[c(2,4,6,8,10,12)]
+col_pal <- brewer.pal(n=12, name='Paired')[c(2,4,6,8,10,12)]
+col_pal_alpha <- paste(col_pal, "55", sep="")
+
+col_8 <- c("#008751", "#1D2B53", "#29ADFF", "#FFA300", "#83769C", "#FF77A8", "#AB5236", "#E31A1C")
+col_8_alpha <- paste(col_8, "55", sep="")
+
+col_6 <- c("#F16745", "#7BC8A4", "#93648D", "#4CC3D9", "#404040", "#FFC65D")
+col_6_alpha <- paste(col_6, "55", sep="")
 ```
 
 Set path.
@@ -83,7 +89,7 @@ setTimeCourseSettings(intervals=19)
 simulations <- runTimeCourse()
 
 # save time-course concentrations
-concentrations <- simulations$result[,1:9]
+concentrations <- simulations$result[,1:12]
 write.table(concentrations, file.path(results_dir, "sim_data.txt"), row.names=FALSE, sep="\t", quote=FALSE)
 ```
 
@@ -105,7 +111,7 @@ print(endTime - startTime)
 
 Plot true vs fitted metabolite dynamics (Figure 2B).
 
-```{r Figure_2B, fig.width = 6.3, fig.height = 4.5, fig.path='toy_model/figures/', dev=c('png', 'pdf')}
+```{r Figure_3B, fig.width = 6.3, fig.height = 4.5, fig.path='toy_model/figures/', dev=c('png', 'pdf')}
 
 # best fit
 x_sim <- res$tp
@@ -115,14 +121,10 @@ y_sim <- res$isp(res$tp)
 x <- simulations$result[,1]
 y <- simulations$result[,colnames(y_sim)]
 
-# create colors
-cols <- fun_col(ncol(y))
-cols_alpha <- paste(cols, "55", sep="")
-
 # plot simulated vs fitted data
-matplot(x=x, y=y, type="p", pch=21, cex=1.5, lwd=2, col=cols, bg=cols_alpha, las=1, ylab="concentration", xlab="time")
-matlines(x=x_sim, y=y_sim, lwd=2, lty=1, col=cols)
-legend("topright", inset=c(0.04, 0), legend=colnames(y), col=cols, pch=21, pt.bg=cols_alpha, pt.cex=1.5, pt.lwd=2, bty="n", ncol=4)
+matplot(x=x, y=y, type="p", pch=21, cex=1.5, lwd=2, col=col_8, bg=col_8_alpha, las=1, ylab="concentration", xlab="time")
+matlines(x=x_sim, y=y_sim, lwd=2, lty=1, col=col_8)
+legend("topright", inset=c(0.04, 0), legend=colnames(y), col=col_8, pch=21, pt.bg=col_8_alpha, pt.cex=1.5, pt.lwd=2, bty="n", ncol=4)
 
 # add legend
 legend("top", inset=c(-0.08, 0), legend="best fit", col="black", lwd=2, bty="n")
@@ -132,7 +134,7 @@ y_sim_sd_p <- res$rsp(res$tpp)
 y_sim_sd_m <- res$rsp(res$tpp)
 for (i in seq(ncol(y_sim))){
   polygon(x=c(res$tpp, rev(res$tpp)), y=c((y_sim_sd_p[,i]), rev(y_sim_sd_m[,i])),
-          col=paste(fun_col(ncol(y))[i], "55", sep=""), border=NA)
+          col=col_8_alpha, border=NA)
 }
 ```
 
@@ -147,11 +149,11 @@ mean_err_conc
 
 Plot true vs fitted flux dynamics.
 
-```{r Figure_2C, fig.width = 6.3, fig.height = 4.5, fig.path='toy_model/figures/', dev=c('png', 'pdf')}
+```{r Figure_3C, fig.width = 6.3, fig.height = 4.5, fig.path='toy_model/figures/', dev=c('png', 'pdf')}
 
 # true flux values
 x <- simulations$result[,1]
-y <- simulations$result[,10:15]
+y <- simulations$result[,13:21]
 
 # fluxes calculated with DynafluxR
 x_sim <- res$tpp
@@ -159,31 +161,27 @@ y_sim <- res$vsp(res$tpp)
 y_sim_sd_p <- res$vsp(res$tpp, fsd=1)
 y_sim_sd_m <- res$vsp(res$tpp, fsd=-1)
 
-# create colors
-cols <- fun_col(ncol(y))
-cols_alpha <- paste(cols, "55", sep="")
-
 # plot true vs estimated fluxes
-matplot(x=x, y=y, type="p", pch=21, cex=1.5, lwd=2, col=cols, bg=cols_alpha, las=1, ylab="rate", xlab="time", ylim=c(0,0.1))
-matlines(x=x_sim, y=y_sim, lwd=2, lty=1, col=cols)
+matplot(x=x, y=y, type="p", pch=21, cex=1.5, lwd=2, col=col_6, bg=col_6_alpha, las=1, ylab="rate", xlab="time", ylim=c(0,0.1))
+matlines(x=x_sim, y=y_sim, lwd=2, lty=1, col=col_6)
 
 # add confidence intervals
 for (i in seq(ncol(y_sim))){
   polygon(x=c(x_sim, rev(x_sim)), y=c((y_sim_sd_p[,i]), rev(y_sim_sd_m[,i])),
-          col=paste(cols[i], "55", sep=""), border=NA)
+          col=col_6_alpha, border=NA)
 }
 
 # add legend
 leg <- stringr::str_remove_all(stringr::str_remove_all(colnames(y), "]"), "Values\\[")
-legend("topright", inset=c(-0.04, 0), legend=leg, col=cols, pch=21, pt.bg=cols_alpha, pt.cex=1.5, pt.lwd=2, bty="n", ncol=4)
-legend("topright", inset=c(0.045, 0.2), legend="estimated", col="black", lwd=2, bty="n")
+legend("topright", inset=c(-0.04, 0), legend=leg, col=col_6, pch=21, pt.bg=col_6_alpha, pt.cex=1.5, pt.lwd=2, bty="n", ncol=4)
+legend("topright", inset=c(0.045, 0.25), legend="estimated", col="black", lwd=2, bty="n")
 ```
 
 Calculate mean error on rates.
 
 ```{r}
 
-mean_err_rates <- mean(as.matrix(abs(simulations$result[,10:15] - res$vsp(res$tp))))
+mean_err_rates <- mean(as.matrix(abs(simulations$result[,13:21] - res$vsp(res$tp))))
 
 mean_err_rates
 ```
@@ -192,10 +190,10 @@ mean_err_rates
 
 Evaluate robustness of the approach with respect to number of measurements (from 5 to 20 data points) and the number of knots (from 2 to 5). Parameters are kept at default values.
 
-```{r Figure_2D, fig.width = 6.3, fig.height = 4.5, fig.path='toy_model/figures/', dev=c('png', 'pdf')}
+```{r Figure_3D, fig.width = 6.3, fig.height = 4.5, fig.path='toy_model/figures/', dev=c('png', 'pdf')}
 
 # number of data points (from 5 to 20)
-n_points <- seq(5, 20)
+n_points <- seq(3, 20)
 # number of knots (from 2 to 5)
 n_k <- seq(2, 5)
 # matrix to store results
@@ -210,12 +208,14 @@ for (i in n_points){
   simulations <- runTimeCourse()
   
   # save simulated metabolite dynamics (input format of DynafluxR)
-  concentrations <- simulations$result[,1:9]
+  concentrations <- simulations$result[,1:12]
   fname <- file.path(tmp_dir, "tmp_1.txt")
   write.table(concentrations, file=fname, row.names=FALSE, sep="\t", quote=FALSE)
     
   # for each number of knots
   for (k in n_k){
+    
+    if (k < i-1){
     
     # calculate fluxes with DynafluxR
     suppressWarnings({
@@ -225,10 +225,11 @@ for (i in n_points){
     })
     
     # calculate mean flux error
-    y <- simulations$result[,10:15]
+    y <- simulations$result[,13:21]
     y_sim <- res$vsp(res$tp)
     residuals_k_p[i-n_points[1]+1, k-n_k[1]+1] <- mean(as.matrix(abs(y-y_sim)))
     
+    }
   }
 }
 ```
@@ -237,16 +238,16 @@ Plot results.
 
 ```{r}
 
-matplot(x=n_points, y=residuals_k_p, ylab="mean rate error", xlab="number of data points", las=1, pch=21, col=col_6, bg=paste0(col_6, "55"), cex=1.5, lwd=2, yaxt="n", log="y")
+matplot(x=n_points, y=residuals_k_p, ylab="mean rate error", xlab="number of data points", las=1, pch=21, col=col_pal, bg=col_pal_alpha, cex=1.5, lwd=2, yaxt="n", log="y")
 axis(2, at=c(1e-3, 1e-2, 1e-1), label=c(0.001, 0.01, 0.1), las=1)
 axis(2, at=c(seq(0.0002, 0.0009, by=0.0001), seq(0.002, 0.009, by=0.001), seq(0.02, 0.09, by=0.01)), labels=FALSE, tcl=-0.3)
 
-legend("topright", inset=c(0.08, 0), title="number of knots", legend=n_k, col=col_6, pch=21, pt.bg=paste(col_6, "55", sep=""), pt.cex=1.5, pt.lwd=2, bty="n", ncol=4)
+legend("topright", inset=c(0.08, 0), title="number of knots", legend=n_k, col=col_pal, pch=21, pt.bg=col_pal_alpha, pt.cex=1.5, pt.lwd=2, bty="n", ncol=4)
 ```
 
 Evaluate robustness of the approach with respect to noise (Gaussian noise, from 1 to 20 % of the highest concentration of each metabolite).
 
-```{r Figure_2E, fig.width = 6.3, fig.height = 4.5, fig.path='toy_model/figures/', dev=c('png', 'pdf')}
+```{r Figure_3E, fig.width = 6.3, fig.height = 4.5, fig.path='toy_model/figures/', dev=c('png', 'pdf')}
 
 # noise levels (relative to the maximal concentration of each metabolite)
 l_noise <- c(0.01, 0.02, 0.05, 0.1, 0.2)
@@ -261,8 +262,8 @@ rownames(residuals_mc) <- l_noise
 # run time-course simulation with COPASI (-> true values) 
 setTimeCourseSettings(intervals=99)
 simulations <- runTimeCourse()
-concentrations <- simulations$result[,1:9]
-fluxes <- simulations$result[,10:15]
+concentrations <- simulations$result[,1:12]
+fluxes <- simulations$result[,13:21]
 
 # for each noise level
 for (i in seq(length(l_noise))){
@@ -273,7 +274,7 @@ for (i in seq(length(l_noise))){
     # generate noisy dataset
     sd_to_add <- apply(concentrations[-1], 2, mean)*l_noise[i]
     noise <- rnorm(prod(dim(concentrations))-nrow(concentrations), mean=0, sd=rep(sd_to_add, each=nrow(concentrations)))
-    concentrations_noise <- concentrations[,-1] + matrix(noise, ncol=8)    
+    concentrations_noise <- concentrations[,-1] + matrix(noise, ncol=11)    
     concentrations_noise[concentrations_noise < 0] <- 0
     concentrations_noise <- cbind(concentrations[,1], concentrations_noise)
     colnames(concentrations_noise) <- colnames(concentrations)
@@ -297,7 +298,7 @@ Plot results.
 ```{r}
 
 # plot results
-vioplot(x=t(residuals_mc), use.cols = TRUE, las=1, col=paste0(col_6[1], "55"), border=col_6[1], rectCol=col_6[1], lineCol=col_6[1], ylim=c(0, 0.015), cex.axis=0.85, yaxs="i")
+vioplot(x=t(residuals_mc), use.cols = TRUE, las=1, col="#1F78B455", border="#1F78B4", rectCol="#1F78B4", lineCol="#1F78B4", ylim=c(0, 0.01), cex.axis=0.85, yaxs="i")
 title(xlab="measurements noise (rsd of mean metabolite concentrations)")
 title(ylab="mean rate error", line=3.3)
 ```
@@ -367,22 +368,25 @@ data
 
 Plot measured vs fitted metabolite dynamics.
 
-```{r Figure_3B, fig.width = 6.3, fig.height = 4.5, fig.path='multienzymatic_model/figures/', dev=c('png', 'pdf')}
+```{r Figure_4B, fig.width = 6.3, fig.height = 4.5, fig.path='multienzymatic_model/figures/', dev=c('png', 'pdf')}
+
+col_4 <- c("#1F78B4", "#E31A1C", "#FF7F00", "#33A02C")
+col_4_alpha <- paste(col_4, "55", sep="")
 
 # plot measured metabolite dynamics
-matplot(x=data[,1], y=data[,2:5], type="p", pch=21, cex=1.5, col=col_6, las=1, ylab="concentration (mM)", xlab="time (min)", lwd=1.5, bg=paste(col_6, "55", sep=""))
+matplot(x=data[,1], y=data[,2:5], type="p", pch=21, cex=1.5, col=col_4, las=1, ylab="concentration (mM)", xlab="time (min)", lwd=1.5, bg=col_4_alpha)
 
 # add best fit
 matlines(x=res$tpp, y=res$isp(res$tpp)[,c(1,3,5,6)], lwd=2.5, lty=1, col="black")
 
 # add legend
-legend("topright", inset=c(0.24, 0), legend=colnames(data[,2:5]), col=col_6, pch=21, pt.bg=paste(col_6, "55", sep=""), pt.cex=1.5, pt.lwd=2, bty="n", ncol=4)
+legend("topright", inset=c(0.24, 0), legend=colnames(data[,2:5]), col=col_4, pch=21, pt.bg=col_4_alpha, pt.cex=1.5, pt.lwd=2, bty="n", ncol=4)
 legend("top", inset=c(0.18, 0.1), legend="best fit", col="black", lwd=2, bty="n")
 ```
 
 Plot rate dynamics.
 
-```{r Figure_3C, fig.width = 6.3, fig.height = 4.5, fig.path='multienzymatic_model/figures/', dev=c('png', 'pdf')}
+```{r Figure_4C, fig.width = 6.3, fig.height = 4.5, fig.path='multienzymatic_model/figures/', dev=c('png', 'pdf')}
 
 # get data to plot
 x_sim_full <- res$tpp
@@ -391,24 +395,24 @@ y_sim_sd_p_full <- res$vsp(res$tpp, fsd=1)
 y_sim_sd_m_full <- res$vsp(res$tpp, fsd=-1)
 
 # plot fluxes
-matplot(x=x_sim_full, y=y_sim_full, type="l", lwd=2.5, lty=1, col=col_6[1:3], las=1, ylab="rate (min-1)", xlab="time (min)")
+matplot(x=x_sim_full, y=y_sim_full, type="l", lwd=2.5, lty=1, col=col_4, las=1, ylab="rate (min-1)", xlab="time (min)")
 
 # add confidence intervals
 for (i in seq(ncol(y_sim_full))){
   polygon(x=c(x_sim_full, rev(x_sim_full)), y=c((y_sim_sd_p_full[,i]), rev(y_sim_sd_m_full[,i])), 
-          col=paste(col_6[i], "55", sep=""), border=NA)
+          col=col_4_alpha, border=NA)
 }
 
 # add legend
 leg <- stringr::str_remove_all(colnames(y_sim_full), ":")
-legend("topright", inset=c(0.04, 0), legend=leg, col=col_6[1:3], lwd=2.5, pt.bg=col_6[1:3], cex=1, bty="n", ncol=4)
+legend("topright", inset=c(0.04, 0), legend=leg, col=col_4, lwd=2.5, pt.bg=col_4_alpha, cex=1, bty="n", ncol=4)
 ```
 
 ## 3.2. Detailed information on metabolite dynamics
 
 The rate estimations allow us to isolate the time-resolved contribution of individual reactions on metabolite dynamics.
 
-```{r Figure_3D, fig.width = 6.3, fig.height = 4.5, fig.path='multienzymatic_model/figures/', dev=c('png', 'pdf')}
+```{r Figure_4D, fig.width = 6.3, fig.height = 4.5, fig.path='multienzymatic_model/figures/', dev=c('png', 'pdf')}
 
 x_sim <- res$tpp
 y_sim <- res$vsp(res$tpp)
@@ -416,19 +420,19 @@ y_sim <- y_sim[,c("HXK:", "PGI:")]
 y_sim[,"PGI:"] <- (-y_sim[,"PGI:"])
 
 # plot fluxes
-matplot(x=x_sim, y=y_sim, type="l", lwd=2.5, lty=1, col=col_6[c(1,3)], las=1, ylab="flux (mM.min-1)", xlab="time (min)")
+matplot(x=x_sim, y=y_sim, type="l", lwd=2.5, lty=1, col=col_4, las=1, ylab="flux (mM.min-1)", xlab="time (min)")
 abline(h=0)
 
 # add legend
 leg <- stringr::str_remove_all(colnames(y_sim), ":")
-legend("topright", inset=c(0.04, 0), legend=leg, col=col_6[c(1,3)], lwd=2.5, pt.bg=col_6[1:3], cex=1, bty="n", ncol=4)
+legend("topright", inset=c(0.04, 0), legend=leg, col=col_4, lwd=2.5, pt.bg=col_6[1:3], cex=1, bty="n", ncol=4)
 ```
 
 ## 3.3. Evaluation of carbon balance
 
 Plot carbon balance of consolidated dataset.
 
-```{r Figure_3E, fig.width = 6.3, fig.height = 4.5, fig.path='multienzymatic_model/figures/', dev=c('png', 'pdf')}
+```{r Figure_4E, fig.width = 6.3, fig.height = 4.5, fig.path='multienzymatic_model/figures/', dev=c('png', 'pdf')}
 
 # calculate carbon balance
 x_sim <- res$tpp
@@ -456,7 +460,7 @@ res=cli(c("-m", file.path(example2_dir, "data.txt"),
 
 Plot rates estimated with and without FBP.
 
-```{r Figure_3F, fig.width = 6.3, fig.height = 4.5, fig.path='multienzymatic_model/figures/', dev=c('png', 'pdf')}
+```{r Figure_4F, fig.width = 6.3, fig.height = 4.5, fig.path='multienzymatic_model/figures/', dev=c('png', 'pdf')}
 
 # get data to plot
 x_sim <- res$tpp
@@ -465,19 +469,19 @@ y_sim_sd_p <- res$vsp(res$tpp, fsd=1)
 y_sim_sd_m <- res$vsp(res$tpp, fsd=-1)
 
 # plot fluxes
-matplot(x=x_sim, y=y_sim, type="l", lwd=2.5, lty=1, col=col_6[1:3], las=1, ylab="rate (min-1)", xlab="time (min)")
+matplot(x=x_sim, y=y_sim, type="l", lwd=2.5, lty=1, col=col_4, las=1, ylab="rate (min-1)", xlab="time (min)")
 
-matlines(x=x_sim_full, y=y_sim_full, type="l", lwd=2.5, lty=2, col=col_6[1:3], las=1, ylab="rate (min-1)", xlab="time (min)")
+matlines(x=x_sim_full, y=y_sim_full, type="l", lwd=2.5, lty=2, col=col_4, las=1, ylab="rate (min-1)", xlab="time (min)")
 
 # add legend
 leg <- stringr::str_remove_all(colnames(y_sim), ":")
-legend("topright", inset=c(0.04, 0), legend=leg, col=col_6[1:3], pch=22, pt.bg=col_6[1:3], cex=1, bty="n", ncol=3)
+legend("topright", inset=c(0.04, 0), legend=leg, col=col_4, pch=22, pt.bg=col_4, cex=1, bty="n", ncol=3)
 legend("topright", inset=c(0.04, 0.1), lty=c(1,2), legend=c("full dataset", "without FBP"), col="black", cex=1, lwd=2, bty="n", ncol=1)
 ```
 
 Predicted FBP dynamics.
 
-```{r Figure_3G, fig.width = 6.3, fig.height = 4.5, fig.path='multienzymatic_model/figures/', dev=c('png', 'pdf')}
+```{r Figure_4G, fig.width = 6.3, fig.height = 4.5, fig.path='multienzymatic_model/figures/', dev=c('png', 'pdf')}
 
 x <- data$Time
 FBP_meas <- data$FBP
@@ -488,7 +492,7 @@ FBP_pred <- res$isp(res$tpp)[,"FBP"]
 FBP_pred_scaled <- FBP_pred/(max(FBP_pred))
 
 
-plot(x=x, y=FBP_meas_scaled, type="p", cex=1.5, lwd=1.5, las=1.5, ylab="relative FBP concentration (AU)", xlab="time (min)", ylim=c(0,1.1), pch=21, col="royalblue", bg="lightblue")
+plot(x=x, y=FBP_meas_scaled, type="p", cex=1.5, lwd=1.5, las=1.5, ylab="relative FBP concentration (AU)", xlab="time (min)", ylim=c(0,1.1), pch=21, col=col_4[4], bg=col_4_alpha[4])
 lines(x=x_pred, y=FBP_pred_scaled, lwd=2.5, lty=1, col="black")
 ```
 
@@ -523,7 +527,7 @@ simulations <- runTimeCourse()
 
 Compare fluxes estimated with kinetic modeling (COPASI) and stoichiometric modeling (DynafluxR).
 
-```{r Figure_3H, fig.width = 6.3, fig.height = 4.5, fig.path='multienzymatic_model/figures/', dev=c('png', 'pdf')}
+```{r Figure_4H, fig.width = 6.3, fig.height = 4.5, fig.path='multienzymatic_model/figures/', dev=c('png', 'pdf')}
 
 # get fluxes from the best fit (COPASI)
 x <- simulations$result[25:1025,1]
@@ -536,17 +540,17 @@ y_sim_sd_p <- res$vsp(res$tpp, fsd=1)
 y_sim_sd_m <- res$vsp(res$tpp, fsd=-1)
 
 # plot flux dynamics
-matplot(x=x, y=y, type="l", lty=2, lwd=2.5, col=col_6[1:3], las=1, ylab="rate (min-1)", xlab="time (min)", ylim=c(0,0.05))
-matlines(x=x_sim, y=y_sim, lwd=2.5, lty=1, col=col_6[1:3])
+matplot(x=x, y=y, type="l", lty=2, lwd=2.5, col=col_4, las=1, ylab="rate (min-1)", xlab="time (min)", ylim=c(0,0.05))
+matlines(x=x_sim, y=y_sim, lwd=2.5, lty=1, col=col_4)
 
 # add confidence intervals (DynafluxR)
 for (i in seq(ncol(y_sim))){
   polygon(x=c(x_sim, rev(x_sim)), y=c((y_sim_sd_p[,i]), rev(y_sim_sd_m[,i])),
-          col=paste(col_6[i], "55", sep=""), border=NA)
+          col=col_4_alpha, border=NA)
 }
 
 # add legend
 leg <- stringr::str_remove_all(stringr::str_remove_all(colnames(y), "]"), "Values\\[")
-legend("topright", inset=c(0.04, 0), legend=leg, col=col_6[1:3], pch=22, pt.bg=col_6[1:3], cex=1, bty="n", ncol=3)
+legend("topright", inset=c(0.04, 0), legend=leg, col=col_4, pch=22, pt.bg=col_4, cex=1, bty="n", ncol=3)
 legend("topright", inset=c(0.04, 0.1), lty=c(1,2), legend=c("stoichiometric model", "kinetic model"), col="black", cex=1, lwd=2, bty="n", ncol=1)
 ```
