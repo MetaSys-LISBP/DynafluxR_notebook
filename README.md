@@ -10,7 +10,7 @@ We showcase DynafluxR usage with step-by-step examples in a R Markdown notebook 
 
 This R code perform all analyses detailed in the following publication:
 
-> Estimating flux dynamics from time-course metabolite concentrations with dynafluxr.
+> Estimating flux dynamics from metabolite concentrations time-courses with dynafluxr.
 >
 > Sokol S., Dubiley S., Rouan P., Charlier C., Lippens G., Millard P. bioRxiv preprint, 2025, doi: [XXXX/XXXX](https://doi.org/XXXX/XXXX)
 
@@ -63,7 +63,7 @@ to [our GitHub issue tracker](https://github.com/MetaSys-LISBP/DynafluxR_noteboo
 
 ## How to cite
 
-Serguei Sokol, Svetlana Dubiley, Pauline Rouan, Cyril Charlier, Guy Lippens, Pierre Millard. Estimating flux dynamics from time-course metabolite concentrations with dynafluxr. bioRxiv preprint, 2025.
+Serguei Sokol, Svetlana Dubiley, Pauline Rouan, Cyril Charlier, Guy Lippens, Pierre Millard. Estimating flux dynamics from metabolite concentrations time-courses with dynafluxr. bioRxiv preprint, 2025.
 
 ## Authors
 Sergueï Sokol, Pierre Millard
