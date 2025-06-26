@@ -23,9 +23,9 @@ This notebook performs all computational analyses detailed in:
 >
 > bioRxiv preprint, doi: 10.1101/XXXXXXXXXXXXX
 
-This R Markdown notebook is available at <https://github.com/MetaSys-LISBP/dynafluxr>
+This R Markdown notebook is available at <https://github.com/MetaSys-LISBP/DynafluxR_notebook> under a GPLv3 License, and DynafluxR is available at <https://github.com/MetaSys-LISBP/dynafluxr>.
 
-Authors: Sergueï Sokol ([sokol\@insa-toulouse.fr](mailto:sokol@insa-toulouse.fr){.email}), Pierre Millard ([pierre.millard\@insa-toulouse.fr](mailto:pierre.millard@insa-toulouse.fr){.email})
+Author: Pierre Millard ([pierre.millard\@insa-toulouse.fr](mailto:pierre.millard@insa-toulouse.fr){.email})
 
 Copyright INRAE, 2025
 
