@@ -17,7 +17,7 @@ knitr::opts_chunk$set(
 
 This notebook performs all computational analyses detailed in:
 
-> **Estimating flux dynamics from time-course metabolite concentrations with dynafluxr.**
+> **Estimating flux dynamics from metabolite concentrations time courses with dynafluxr.**
 >
 > S. Sokol, S. Dubiley, P. Rouan, C. Charlier, G. Lippens, P. Millard
 >
